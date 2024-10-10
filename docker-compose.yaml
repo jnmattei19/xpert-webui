@@ -7,6 +7,19 @@ services:
     tty: true
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - USE_CUDA=true
+      - gpus=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+    - open-webui_default
 
   open-webui:
     build:
@@ -28,7 +41,118 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    networks:
+    - open-webui_default
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+    ports:
+      - "9099:9099"
+    restart: unless-stopped
+    networks:
+      - open-webui_default
+
+
+  grafana:
+    image: grafana/grafana-oss  # open source
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+    - GF_SERVER_ROOT_URL=http://my.grafana.server/
+    - GF_INSTALL_PLUGINS=grafana-clock-panel
+    ports:
+    - '4000:3000'  # Change this line to map port 4000 on the host to port 3000 in the container
+    volumes:
+     - '/home/xpert/Desktop/open-webui/grafana_data:/var/lib/grafana'  # Bind mount
+    networks:
+    - open-webui_default
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - '9090:9090'  # Expose Prometheus on port 9090
+    volumes:
+      - /home/xpert/Desktop/open-webui/prometheus.yml:/etc/prometheus/prometheus.yml  # Map prometheus.yml config file
+      - /home/xpert/Desktop/open-webui/prometheus_data:/prometheus/data  # Ensure data directory is mapped correctly
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - ollama
+    networks:
+    - open-webui_default
+
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - '--path.rootfs=/host'  # Needed to expose host-level metrics
+    cap_add:
+      - SYS_TIME  # Add SYS_TIME capability for accessing time-related syscalls
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - '/:/host:ro,rslave'  # Mount host root filesystem as read-only for access to system metrics
+    networks:
+      - open-webui_default
+
+  dcgm-exporter:
+    image: nvidia/dcgm-exporter:latest
+    container_name: dcgm-exporter
+    runtime: nvidia  # Enable NVIDIA runtime for GPU access
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    cap_add:
+      - SYS_ADMIN  # Add SYS_ADMIN capability
+    ports:
+      - "9400:9400"  # Expose DCGM Exporter on port 9400
+    restart: unless-stopped
+    networks:
+      - open-webui_default
+
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: it-tools
+    ports:
+      - "8081:80"  # Changed to 8081 to avoid conflicts with 8080
+    restart: unless-stopped
+    networks:
+      - open-webui_default
+
+  jenkins:
+    image: jenkins/jenkins:lts  # Uses the long-term support (LTS) version of the official Jenkins image
+    container_name: jenkins-dind  # Names the container "jenkins-dind" for easier management
+    privileged: true  # Required for DinD (Docker in Docker) to access and manage the Docker daemon inside the container
+    ports:
+      - "8090:8080"  # Maps port 8090 on the host to port 8080 in the container, exposing the Jenkins web interface
+      - "50000:50000"  # Maps port 50000 on both host and container for Jenkins agent communication
+    environment:
+      - JENKINS_OPTS=--httpPort=8080  # Configures Jenkins to listen on port 8080 within the container
+    volumes:
+      - jenkins_home:/var/jenkins_home  # Maps a named volume to /var/jenkins_home in the container for persisting Jenkins data (job configurations, plugins, etc.)
+      - /my/own/var-lib-docker:/var/lib/docker  # Binds the host directory "/my/own/var-lib-docker" to "/var/lib/docker" inside the container to store Docker data (images, containers, volumes)
+    restart: unless-stopped  # Ensures the container automatically restarts if it stops, except when explicitly stopped
+    networks:
+      - open-webui_default  # Connects the Jenkins container to the "open-webui_default" network for communication with other services
+
+
+networks:
+  open-webui_default:
+    driver: bridge
 
 volumes:
   ollama: {}
   open-webui: {}
+  jenkins_home: {}
+
