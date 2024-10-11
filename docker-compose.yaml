@@ -130,21 +130,21 @@ services:
     networks:
       - open-webui_default
 
-  jenkins:
-    image: jenkins/jenkins:lts  # Uses the long-term support (LTS) version of the official Jenkins image
-    container_name: jenkins-dind  # Names the container "jenkins-dind" for easier management
-    privileged: true  # Required for DinD (Docker in Docker) to access and manage the Docker daemon inside the container
-    ports:
-      - "8090:8080"  # Maps port 8090 on the host to port 8080 in the container, exposing the Jenkins web interface
-      - "50000:50000"  # Maps port 50000 on both host and container for Jenkins agent communication
-    environment:
-      - JENKINS_OPTS=--httpPort=8080  # Configures Jenkins to listen on port 8080 within the container
-    volumes:
-      - jenkins_home:/var/jenkins_home  # Maps a named volume to /var/jenkins_home in the container for persisting Jenkins data (job configurations, plugins, etc.)
-      - /my/own/var-lib-docker:/var/lib/docker  # Binds the host directory "/my/own/var-lib-docker" to "/var/lib/docker" inside the container to store Docker data (images, containers, volumes)
-    restart: unless-stopped  # Ensures the container automatically restarts if it stops, except when explicitly stopped
-    networks:
-      - open-webui_default  # Connects the Jenkins container to the "open-webui_default" network for communication with other services
+  #jenkins:
+   # image: jenkins/jenkins:lts  # Uses the long-term support (LTS) version of the official Jenkins image
+    #container_name: jenkins-dind  # Names the container "jenkins-dind" for easier management
+    #privileged: true  # Required for DinD (Docker in Docker) to access and manage the Docker daemon inside the container
+    #ports:
+     # - "8090:8080"  # Maps port 8090 on the host to port 8080 in the container, exposing the Jenkins web interface
+      #- "50000:50000"  # Maps port 50000 on both host and container for Jenkins agent communication
+    #environment:
+     # - JENKINS_OPTS=--httpPort=8080  # Configures Jenkins to listen on port 8080 within the container
+    #volumes:
+     # - jenkins_home:/var/jenkins_home  # Maps a named volume to /var/jenkins_home in the container for persisting Jenkins data (job configurations, plugins, etc.)
+      #- /my/own/var-lib-docker:/var/lib/docker  # Binds the host directory "/my/own/var-lib-docker" to "/var/lib/docker" inside the container to store Docker data (images, containers, volumes)
+    #restart: unless-stopped  # Ensures the container automatically restarts if it stops, except when explicitly stopped
+    #networks:
+     # - open-webui_default  # Connects the Jenkins container to the "open-webui_default" network for communication with other services
 
 
 networks:
@@ -154,5 +154,5 @@ networks:
 volumes:
   ollama: {}
   open-webui: {}
-  jenkins_home: {}
+  #jenkins_home: {}
 
