@@ -130,7 +130,7 @@ services:
     networks:
       - open-webui_default
 
-  #jenkins:is a CICD tool
+  #jenkins:is a CICD tool --
    # image: jenkins/jenkins:lts  # Uses the long-term support (LTS) version of the official Jenkins image
     #container_name: jenkins-dind  # Names the container "jenkins-dind" for easier management
     #privileged: true  # Required for DinD (Docker in Docker) to access and manage the Docker daemon inside the container
